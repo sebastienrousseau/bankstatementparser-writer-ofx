@@ -1,62 +1,132 @@
-# Open Financial Exchange (OFX) Writer for Bank Statement Parser
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Apache_2.0_OR_MIT-blue.svg)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/sebastienrousseau/bankstatementparser-writer-ofx)
+<p align="center">
+  <img
+    src="https://cloudcdn.pro/bankstatementparser/v1/logos/bankstatementparser.svg"
+    alt="bankstatementparser-writer-ofx logo"
+    width="120"
+    height="120"
+  />
+</p>
 
-Open Financial Exchange (OFX) export writer plugin for [`bankstatementparser`](https://github.com/sebastienrousseau/bankstatementparser).
+<h1 align="center">bankstatementparser-writer-ofx</h1>
+
+<p align="center">
+  <b>Open Financial Exchange (OFX) 1.02 / 2.x structured export writer plugin for bankstatementparser.</b>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/bankstatementparser-writer-ofx/"><img src="https://img.shields.io/pypi/v/bankstatementparser-writer-ofx?style=for-the-badge" alt="PyPI version" /></a>
+  <a href="https://pypi.org/project/bankstatementparser-writer-ofx/"><img src="https://img.shields.io/pypi/pyversions/bankstatementparser-writer-ofx.svg?style=for-the-badge" alt="Python versions" /></a>
+  <a href="https://pypi.org/project/bankstatementparser-writer-ofx/"><img src="https://img.shields.io/pypi/dm/bankstatementparser-writer-ofx.svg?style=for-the-badge" alt="PyPI downloads" /></a>
+  <a href="https://github.com/sebastienrousseau/bankstatementparser-writer-ofx/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/bankstatementparser-writer-ofx/ci.yml?branch=main&label=Tests&style=for-the-badge" alt="Tests" /></a>
+  <a href="#license"><img src="https://img.shields.io/pypi/l/bankstatementparser-writer-ofx?style=for-the-badge" alt="License" /></a>
+</p>
 
 ---
 
-## Features
+## Contents
 
-- **Standard OFX 1.02 Serialization**: Generates clean, compliant OFX files compatible with Quicken, QuickBooks, Xero, Sage, Money, and standard accounting software.
-- **Multiple Input Shapes**: Seamlessly accepts `list[Transaction]`, `pandas.DataFrame`, `list[dict]`, or any `bankstatementparser` statement parser object.
-- **Configurable Headers**: Customize bank routing ID, account ID, account type (`CHECKING`, `SAVINGS`, `CREDITLINE`), and currency.
-- **100% Type Safe & Tested**: Full static typing and 100% test coverage.
+- [What is bankstatementparser-writer-ofx?](#what-is-bankstatementparser-writer-ofx) — the problem it solves
+- [Install](#install) — PyPI, virtualenv
+- [Quick start](#quick-start) — export transactions to OFX in three lines
+- [Public API](#public-api) — `to_ofx`, `write_ofx`
+- [OFX Specification](#ofx-specification) — XML & SGML structures
+- [Development](#development) — quality gates, tests
+- [Ecosystem](#ecosystem) — modular package suite
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Installation
+## What is bankstatementparser-writer-ofx?
 
-```bash
-pip install bankstatementparser-writer-ofx
+**OFX** (Open Financial Exchange) is the multi-institution open standard for financial data exchange, used globally by ERPs, accounting suites, and personal financial management tools.
+
+**bankstatementparser-writer-ofx** exports parsed `bankstatementparser` transactions into valid OFX 1.02 (SGML) and OFX 2.x (XML) statement documents (`<BANKMSGSRSV1><STMTTRNRS>`).
+
+| Concern | How this writer handles it |
+| :--- | :--- |
+| **Input Flexibility** | Accepts `list[Transaction]`, `pandas.DataFrame`, or `list[dict]` |
+| **OFX Structures** | Encapsulates `<SIGNONMSGSRSV1>`, `<BANKMSGSRSV1>`, `<STMTRS>`, `<BANKTRANLIST>`, and `<LEDGERBAL>` |
+| **Transaction Types** | Generates `<TRNTYPE>` (`CREDIT`, `DEBIT`, `PAYMENT`, `CHECK`, `FEE`) |
+| **Identifiers** | Includes `<FITID>`, `<NAME>`, `<MEMO>`, `<DTPOSTED>`, and `<TRNAMT>` |
+
+---
+
+## Install
+
+| Channel | Command | Notes |
+| :--- | :--- | :--- |
+| PyPI | `pip install bankstatementparser-writer-ofx` | Pulls in `bankstatementparser >= 0.0.19` |
+| Source | `git clone https://github.com/sebastienrousseau/bankstatementparser-writer-ofx && cd bankstatementparser-writer-ofx && poetry install` | For local development |
+
+Requires Python 3.10 or later. Compatible with macOS, Linux, and Windows.
+
+<details>
+<summary>Using an isolated virtual environment (recommended)</summary>
+
+```sh
+python -m venv venv
+source venv/bin/activate        # macOS/Linux
+venv\Scripts\activate           # Windows
+python -m pip install -U bankstatementparser-writer-ofx
 ```
 
+</details>
+
 ---
 
-## Quickstart
+
+## Quick start
 
 ```python
-from bankstatementparser.transaction_models import Transaction
 from bankstatementparser_writer_ofx import write_ofx
-from decimal import Decimal
-from datetime import date
+from bankstatementparser import create_parser
 
-transactions = [
-    Transaction(
-        account_id="FR76123456789",
-        amount=Decimal("2500.00"),
-        currency="EUR",
-        booking_date=date(2026, 1, 15),
-        description="Client Payment & Co",
-        reference="REF-001",
-    ),
-    Transaction(
-        account_id="FR76123456789",
-        amount=Decimal("-75.30"),
-        currency="EUR",
-        booking_date=date(2026, 1, 16),
-        description="Restaurant Downtown",
-        reference="REF-002",
-    ),
-]
+# 1. Parse statement
+parser = create_parser("statement.csv")
+transactions = parser.to_transactions()
 
-# Write to OFX file
-write_ofx(transactions, "statement.ofx", bank_id="123456789")
+# 2. Export to standard OFX XML document
+write_ofx(
+    transactions,
+    "statement.ofx",
+    bank_id="123456789",
+    account_id="987654321",
+    currency="EUR",
+)
 ```
 
 ---
+
+## Public API
+
+- `to_ofx(data: Any, bank_id: str = "DEFAULT", account_id: str = "DEFAULT", currency: str = "EUR") -> str`: Serializes transactions to OFX string.
+- `write_ofx(data: Any, output_path: str | Path, bank_id: str = "DEFAULT", account_id: str = "DEFAULT", currency: str = "EUR") -> Path`: Writes OFX data to file.
+
+---
+
+## Development
+
+The project enforces strict code-quality gates: 100% test and branch coverage, strict type annotations (`mypy`), style linting (`ruff`), docstring coverage (`interrogate`), and security scanning (`bandit`).
+
+```bash
+# Run test suite with branch coverage enforcement
+poetry run pytest
+
+# Type checking and linting
+poetry run mypy .
+poetry run ruff check .
+poetry run ruff format --check .
+
+# Documentation and security gates
+poetry run interrogate -v
+poetry run bandit -r . -c pyproject.toml
+```
+
+---
+
 
 ## Ecosystem
 
@@ -81,6 +151,13 @@ write_ofx(transactions, "statement.ofx", bank_id="123456789")
 
 ---
 
+## Contributing
+
+Contributions are welcome! Please submit an issue or pull request on GitHub. Ensure that all quality gates pass and test coverage remains at 100%.
+
+---
+
 ## License
 
-Dual-licensed under Apache 2.0 and MIT.
+This project is dual-licensed under the **Apache License 2.0** and the **MIT License**. See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for full details.
+

@@ -7,5 +7,5 @@ from __future__ import annotations
 
 from .writer import to_ofx, write_ofx
 
-__version__ = "0.0.1"
+__version__ = "0.0.19"
 __all__ = ["__version__", "to_ofx", "write_ofx"]

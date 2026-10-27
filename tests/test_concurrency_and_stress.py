@@ -3,7 +3,6 @@
 
 """Concurrency and stress tests for OFX writer."""
 
-import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 
@@ -13,7 +12,11 @@ from bankstatementparser_writer_ofx import to_ofx
 
 
 def test_ofx_writer_concurrency() -> None:
-    """Verify OFX export throughput under concurrent execution."""
+    """Concurrent exports each return a complete OFX document.
+
+    No wall-clock bound: runner speed varies too much for a timing
+    assertion to mean anything here, and it made CI fail at random.
+    """
     txns = [
         Transaction(
             account_id="ACC1",
@@ -26,14 +29,11 @@ def test_ofx_writer_concurrency() -> None:
     ]
 
     iterations = 500
-    start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [executor.submit(to_ofx, txns) for _ in range(iterations)]
         results = [f.result() for f in futures]
-    elapsed = time.perf_counter() - start
 
     assert len(results) == iterations
     for ofx_str in results:
         assert "<OFX>" in ofx_str
         assert "<TRNAMT>123.45" in ofx_str
-    assert elapsed < 5.0

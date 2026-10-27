@@ -5,6 +5,15 @@ All notable changes to `bankstatementparser-writer-ofx` will be documented in th
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `tests/test_concurrency_and_stress.py` no longer asserts that 500
+  concurrent exports finish in under 5 seconds. Runner speed made the
+  Test (Python 3.12) job fail at random (5.39 s on 2026-10-11); the test
+  still checks every result is a complete OFX document.
+
 ## [0.0.19] - 2026-09-01
 
 ### Added

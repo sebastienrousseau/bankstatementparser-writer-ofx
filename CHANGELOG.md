@@ -35,6 +35,8 @@ to PyPI.
 - Requires `bankstatementparser >= 0.0.34` (was `>= 0.0.18`); the lock
   is refreshed, and ruff may now resolve to 0.17.
 - CI moves to `actions/checkout@v7` and `actions/setup-python@v7`.
+- CI runs the examples, and installs the built wheel into a clean
+  virtualenv and imports it.
 - The coverage gate measures branches as well as lines.
 - `test_version` reads the expected version from `pyproject.toml`
   instead of restating it.

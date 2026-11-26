@@ -1,0 +1,26 @@
+{
+  "bankstatementparser_writer_ofx/writer.py::_format_ofx_datetime": {
+    "cyclomatic": 11
+  },
+  "bankstatementparser_writer_ofx/writer.py::_normalize_records": {
+    "cyclomatic": 12
+  },
+  "bankstatementparser_writer_ofx/writer.py::to_ofx": {
+    "cognitive": 21,
+    "cyclomatic": 26,
+    "lines": 133
+  },
+  "tests/test_suite_conformance.py": {
+    "file_lines": 678
+  },
+  "tests/test_suite_conformance.py::_dev_spec": {
+    "cognitive": 23,
+    "cyclomatic": 12
+  },
+  "tests/test_writer.py::test_formatting_edge_cases": {
+    "cyclomatic": 18
+  },
+  "tests/test_writer.py::test_to_ofx_with_transactions": {
+    "cyclomatic": 15
+  }
+}

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -13,6 +14,11 @@ import pandas as pd
 from bankstatementparser.transaction_models import Transaction
 from hypothesis import given
 from hypothesis import strategies as st
+
+if sys.version_info >= (3, 11):  # pragma: no cover - version dependent
+    import tomllib
+else:  # pragma: no cover - version dependent
+    import tomli as tomllib
 
 from bankstatementparser_writer_ofx import __version__, to_ofx, write_ofx
 from bankstatementparser_writer_ofx.writer import (
@@ -55,8 +61,12 @@ class DummyParserWithDataFrame:
 
 
 def test_version() -> None:
-    """Verifies that version is exposed and semantic."""
-    assert __version__ == "0.0.19"
+    """The exported version is the one pyproject.toml declares."""
+    with (Path(__file__).resolve().parents[1] / "pyproject.toml").open(
+        "rb"
+    ) as handle:
+        declared = tomllib.load(handle)["tool"]["poetry"]["version"]
+    assert __version__ == declared
 
 
 def test_to_ofx_with_transactions() -> None:
@@ -185,6 +195,12 @@ def test_formatting_edge_cases() -> None:
 
     assert _escape_ofx_text(None) == ""
     assert _escape_ofx_text("A & B < C > D") == "A &amp; B &lt; C &gt; D"
+
+
+def test_unsupported_items_are_skipped() -> None:
+    """Items that are neither a Transaction nor a mapping are dropped."""
+    records = _normalize_records([{"amount": "1.00"}, 42, "text", None])
+    assert records == [{"amount": "1.00"}]
 
 
 def test_empty_records_ofx() -> None:

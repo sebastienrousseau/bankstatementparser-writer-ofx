@@ -1,0 +1,131 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write  # OIDC for PyPI trusted publishing
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Verify version matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(grep -E '^__version__' bankstatementparser_writer_ofx/__init__.py | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package version $PKG" >&2
+            exit 1
+          fi
+
+      # The release body's Highlights are the one hand-written part.
+      # Refuse to publish anything when they are missing or malformed.
+      - name: Check release highlights
+        run: python3 scripts/release_notes.py check ".github/releases/$GITHUB_REF_NAME.md"
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Twine check
+        run: twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  github-release:
+    name: GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download dist
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Require a CHANGELOG section
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^## \\[$VERSION\\]" CHANGELOG.md; then
+            echo "No CHANGELOG.md section for $VERSION" >&2
+            exit 1
+          fi
+
+      # Creates the release with the highlights as a placeholder body;
+      # the release-notes job writes the full body afterwards.
+      # Release titles read "<project> <version>", never the bare tag.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "${GITHUB_REPOSITORY#*/} ${GITHUB_REF_NAME#v}" \
+              --notes-file ".github/releases/$GITHUB_REF_NAME.md"
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+
+  # Runs after the assets are attached, so the Checksums section covers
+  # every one, and rewrites the title and body in the suite's format
+  # (scripts/release_notes.py).
+  release-notes:
+    name: Write the release notes
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compose and apply the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir assets
+          python3 scripts/release_notes.py compose \
+            --repo "$GITHUB_REPOSITORY" --tag "$GITHUB_REF_NAME" \
+            --highlights ".github/releases/$GITHUB_REF_NAME.md" \
+            --assets assets --output release-notes.md
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "${GITHUB_REPOSITORY#*/} ${GITHUB_REF_NAME#v}" \
+            --notes-file release-notes.md
+
+  pypi-publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/bankstatementparser-writer-ofx
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish via OIDC trusted publishing
+        uses: pypa/gh-action-pypi-publish@release/v1

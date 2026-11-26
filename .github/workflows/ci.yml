@@ -19,10 +19,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-cov pytest-benchmark interrogate hypothesis bandit
+          pip install pytest pytest-cov pytest-benchmark interrogate hypothesis bandit 'tomli; python_version<"3.11"'
 
       - name: Run tests with 100% coverage
         run: |
@@ -61,10 +61,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -86,3 +86,62 @@ jobs:
 
       - name: Security audit with Bandit
         run: bandit -r bankstatementparser_writer_ofx -c pyproject.toml
+
+      - name: Complexity baseline
+        run: python3 scripts/check_complexity.py
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install this package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run examples
+        run: |
+          for f in examples/*.py; do echo "=== $f ==="; python "$f"; done
+
+  smoke:
+    # The wheel PyPI receives, installed on its own: catches a package
+    # that only imports from a source checkout.
+    name: Install smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+
+      - name: Install the wheel into a fresh virtualenv
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/smoke/bin/pip" install dist/*.whl
+
+      - name: Import the installed package
+        run: |
+          "$RUNNER_TEMP/smoke/bin/python" -c "import bankstatementparser_writer_ofx as w; print(w.__version__)"
+
+      - name: Run an example from a neutral working directory
+        run: |
+          cd "$RUNNER_TEMP" && "$RUNNER_TEMP/smoke/bin/python" "$GITHUB_WORKSPACE/examples/01_basic_usage.py"

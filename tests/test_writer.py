@@ -187,6 +187,12 @@ def test_formatting_edge_cases() -> None:
     assert _escape_ofx_text("A & B < C > D") == "A &amp; B &lt; C &gt; D"
 
 
+def test_unsupported_items_are_skipped() -> None:
+    """Items that are neither a Transaction nor a mapping are dropped."""
+    records = _normalize_records([{"amount": "1.00"}, 42, "text", None])
+    assert records == [{"amount": "1.00"}]
+
+
 def test_empty_records_ofx() -> None:
     """Tests empty transactions list in to_ofx."""
     out = to_ofx([])

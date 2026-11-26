@@ -34,6 +34,10 @@ to PyPI.
   (cyclomatic 10, cognitive 15, Halstead 30, 60 lines; 500 lines per
   file), run in CI's lint job. The 7 functions and files already over
   a ceiling are baselined and may not get worse.
+- `.github/workflows/codeql.yml`: CodeQL scanning of the workflows and
+  the Python sources as an advanced setup, replacing GitHub's default
+  setup; the `Analyze (actions)` and `Analyze (python)` check names are
+  unchanged.
 
 ### Changed
 

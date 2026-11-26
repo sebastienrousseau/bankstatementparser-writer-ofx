@@ -87,6 +87,9 @@ jobs:
       - name: Security audit with Bandit
         run: bandit -r bankstatementparser_writer_ofx -c pyproject.toml
 
+      - name: Complexity baseline
+        run: python3 scripts/check_complexity.py
+
   examples:
     name: Examples
     runs-on: ubuntu-latest

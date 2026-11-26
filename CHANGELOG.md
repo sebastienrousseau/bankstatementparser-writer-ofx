@@ -29,6 +29,11 @@ to PyPI.
   updates; the repository had none.
 - `tests/test_suite_conformance.py`, the suite's vendored conformance
   checks, and `scripts/verify_versions.py`.
+- `scripts/check_complexity.py`, the suite's complexity gate, with
+  `scripts/complexity_baseline.json`: per-function ceilings
+  (cyclomatic 10, cognitive 15, Halstead 30, 60 lines; 500 lines per
+  file), run in CI's lint job. The 7 functions and files already over
+  a ceiling are baselined and may not get worse.
 
 ### Changed
 

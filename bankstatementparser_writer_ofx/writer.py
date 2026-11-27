@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -39,15 +39,27 @@ def _format_ofx_datetime(val: Any) -> str:
     return str(val)
 
 
+_CENT = Decimal("0.01")
+
+
 def _coerce_amount_decimal(val: Any) -> Decimal:
-    """Coerce various amount types to a finite Decimal.
+    """Coerce various amount types to a finite, ledger-sized Decimal.
 
     A NaN or infinite amount becomes 0.00, as an unparseable one does:
     OFX has no way to write either, and a NaN Decimal raises on the
-    credit/debit comparison.
+    credit/debit comparison. So does an amount that does not fit the
+    default 28 significant digits at cent precision: "1E+999999999" is
+    finite, but writing it with two decimals would build a
+    billion-digit string.
     """
     amount = _parse_amount(val)
-    return amount if amount.is_finite() else Decimal("0.00")
+    if not amount.is_finite():
+        return Decimal("0.00")
+    try:
+        amount.quantize(_CENT)
+    except InvalidOperation:
+        return Decimal("0.00")
+    return amount
 
 
 def _parse_amount(val: Any) -> Decimal:
@@ -56,7 +68,9 @@ def _parse_amount(val: Any) -> Decimal:
         return Decimal("0.00")
     if isinstance(val, Decimal):
         return val
-    if isinstance(val, (int, float)):
+    if isinstance(val, int):
+        return Decimal(val)
+    if isinstance(val, float):
         return Decimal(f"{val:.2f}")
     if isinstance(val, str):
         clean = val.strip().replace(",", "")

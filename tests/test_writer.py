@@ -263,3 +263,17 @@ def test_dates_and_currency_cannot_inject_markup() -> None:
     assert "<DTPOSTED>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
     assert "<DTSTART>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
     assert "<FOO>" not in out
+
+
+@pytest.mark.parametrize("amount", ["1E+999999", "-9e100", 1e300, 10**400])
+def test_out_of_range_amount_is_written_as_zero(amount: object) -> None:
+    """An amount too large for a ledger becomes 0.00 instead of digits.
+
+    "1E+999999999" parsed to a finite Decimal, and formatting it with
+    two decimals built a billion-digit string: the fuzz job hit a
+    MemoryError on it. Anything that does not fit 28 significant digits
+    at cent precision is now treated like an unparseable amount.
+    """
+    out = to_ofx([{"amount": amount}])
+    assert "<TRNAMT>0.00\n" in out
+    assert len(out) < 2000

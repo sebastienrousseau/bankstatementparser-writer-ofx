@@ -11,6 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from bankstatementparser.transaction_models import Transaction
 from hypothesis import given
 from hypothesis import strategies as st
@@ -231,3 +232,19 @@ def test_fuzz_to_ofx(amount: Decimal, payee: str) -> None:
     out = to_ofx(txs)
     assert "<OFX>" in out
     assert "</OFX>" in out
+
+
+@pytest.mark.parametrize(
+    "amount",
+    ["NaN", "sNaN", "-NaN", "Infinity", "-inf", Decimal("NaN"), float("inf")],
+)
+def test_non_finite_amount_is_written_as_zero(amount: object) -> None:
+    """A NaN or infinite amount becomes 0.00, as an unparseable one does.
+
+    "NaN" used to reach a Decimal comparison and raise InvalidOperation,
+    and "Infinity" was written as <TRNAMT>Infinity, which no OFX reader
+    accepts.
+    """
+    out = to_ofx([{"amount": amount, "payee": "Odd amount"}])
+    assert "<TRNAMT>0.00" in out
+    assert "<BALAMT>0.00" in out

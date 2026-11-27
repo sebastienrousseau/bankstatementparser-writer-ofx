@@ -40,7 +40,18 @@ def _format_ofx_datetime(val: Any) -> str:
 
 
 def _coerce_amount_decimal(val: Any) -> Decimal:
-    """Coerce various amount types to Decimal."""
+    """Coerce various amount types to a finite Decimal.
+
+    A NaN or infinite amount becomes 0.00, as an unparseable one does:
+    OFX has no way to write either, and a NaN Decimal raises on the
+    credit/debit comparison.
+    """
+    amount = _parse_amount(val)
+    return amount if amount.is_finite() else Decimal("0.00")
+
+
+def _parse_amount(val: Any) -> Decimal:
+    """Parse the supported amount types to Decimal (possibly non-finite)."""
     if val is None or (isinstance(val, float) and pd.isna(val)):
         return Decimal("0.00")
     if isinstance(val, Decimal):

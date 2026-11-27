@@ -1,3 +1,1 @@
-# Changelog
-
-See CHANGELOG.md in repository root.
+--8<-- "CHANGELOG.md"

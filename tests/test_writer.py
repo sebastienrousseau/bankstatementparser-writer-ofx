@@ -11,6 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from bankstatementparser.transaction_models import Transaction
 from hypothesis import given
 from hypothesis import strategies as st
@@ -231,3 +232,48 @@ def test_fuzz_to_ofx(amount: Decimal, payee: str) -> None:
     out = to_ofx(txs)
     assert "<OFX>" in out
     assert "</OFX>" in out
+
+
+@pytest.mark.parametrize(
+    "amount",
+    ["NaN", "sNaN", "-NaN", "Infinity", "-inf", Decimal("NaN"), float("inf")],
+)
+def test_non_finite_amount_is_written_as_zero(amount: object) -> None:
+    """A NaN or infinite amount becomes 0.00, as an unparseable one does.
+
+    "NaN" used to reach a Decimal comparison and raise InvalidOperation,
+    and "Infinity" was written as <TRNAMT>Infinity, which no OFX reader
+    accepts.
+    """
+    out = to_ofx([{"amount": amount, "payee": "Odd amount"}])
+    assert "<TRNAMT>0.00" in out
+    assert "<BALAMT>0.00" in out
+
+
+def test_dates_and_currency_cannot_inject_markup() -> None:
+    """Record dates and the currency are escaped like every other value.
+
+    They were written raw, so a currency of "<X>" or a date string
+    holding markup or a newline opened elements in the document.
+    """
+    out = to_ofx(
+        [{"amount": "1.00", "date": "2026<01>&\n<FOO>", "currency": "<X>"}]
+    )
+    assert "<CURDEF>&lt;X&gt;\n" in out
+    assert "<DTPOSTED>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
+    assert "<DTSTART>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
+    assert "<FOO>" not in out
+
+
+@pytest.mark.parametrize("amount", ["1E+999999", "-9e100", 1e300, 10**400])
+def test_out_of_range_amount_is_written_as_zero(amount: object) -> None:
+    """An amount too large for a ledger becomes 0.00 instead of digits.
+
+    "1E+999999999" parsed to a finite Decimal, and formatting it with
+    two decimals built a billion-digit string: the fuzz job hit a
+    MemoryError on it. Anything that does not fit 28 significant digits
+    at cent precision is now treated like an unparseable amount.
+    """
+    out = to_ofx([{"amount": amount}])
+    assert "<TRNAMT>0.00\n" in out
+    assert len(out) < 2000

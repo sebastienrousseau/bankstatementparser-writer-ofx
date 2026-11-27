@@ -1,0 +1,5 @@
+date,description,amount,currency,reference
+2026-01-05,Salary January,2500.00,EUR,SAL-0105
+2026-01-07,Rent,-950.00,EUR,RENT-0107
+2026-01-12,Grocery & Co,-84.37,EUR,CARD-0112
+2026-01-20,Electricity <Direct Debit>,-61.20,EUR,DD-0120

@@ -34,7 +34,8 @@ into OFX 1.02 text, and writes it to a path only when you call
   has `&`, `<` and `>` escaped and newlines replaced, so record text
   cannot open or close an OFX element (dates and the currency were
   written raw before 0.0.36).
-- **Amounts** that cannot be parsed, or that are NaN or infinite, are
+- **Amounts** that cannot be parsed, or that are NaN, infinite or too
+  large for 28 significant digits at cent precision, are
   written as `0.00` rather than raising; check your input if a total
   matters.
 - **Fuzzing.** `fuzz/fuzz_to_ofx.py` drives `to_ofx` with Atheris in CI

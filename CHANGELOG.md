@@ -17,6 +17,10 @@ In lockstep with the suite's 0.0.36 release.
   (or `"sNaN"`, or a NaN `Decimal`), and wrote `"Infinity"` as
   `<TRNAMT>Infinity`. Any NaN or infinite amount is now written as
   `0.00`, as an unparseable amount already was.
+- An amount too large for 28 significant digits at cent precision
+  (for example `"1E+999999999"`, which the fuzz job found) ran out of
+  memory while being formatted, and a huge `int` raised
+  `OverflowError`; both are now written as `0.00`.
 - Record dates (`<DTPOSTED>`, `<DTSTART>`, `<DTEND>`) and the currency
   (`<CURDEF>`) were written without escaping, so markup or a newline in
   them opened elements in the document. Every value is now escaped.

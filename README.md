@@ -213,7 +213,7 @@ There is no configuration file or environment variable; the writer's arguments a
 - **You need OFX 2.x (XML).** Only OFX 1.02 SGML is written.
 - **Your names are not ASCII and your importer is strict.** The header declares `ENCODING:USASCII` and `CHARSET:1252`, but `write_ofx` writes UTF-8.
 - **You need a bank-reported balance.** `<LEDGERBAL>` is the sum of the written transactions.
-- **You need bad input reported.** An unparseable, NaN or infinite amount is written as `0.00` and a missing date as the current time, without an error.
+- **You need bad input reported.** An unparseable, NaN, infinite or out-of-range amount is written as `0.00` and a missing date as the current time, without an error.
 - **You need transaction types beyond credit and debit** (`CHECK`, `FEE`, `PAYMENT` and the like).
 - **You need to read OFX.** Use the core [`bankstatementparser`](https://pypi.org/project/bankstatementparser/), which parses OFX and QFX.
 
@@ -236,7 +236,7 @@ make check
 
 - **No network and no reads.** The writer opens no connection and reads no file; `write_ofx` writes only to the path you give.
 - **Escaping.** Every value from the records or the arguments has `&`, `<` and `>` escaped and newlines removed, so record text cannot open or close an OFX element.
-- **Fuzzing.** `fuzz/fuzz_to_ofx.py` drives `to_ofx` with Atheris in CI and fails on any exception, a lost record, a malformed amount or markup in an element value. It found the unescaped dates and currency fixed in 0.0.36.
+- **Fuzzing.** `fuzz/fuzz_to_ofx.py` drives `to_ofx` with Atheris in CI and fails on any exception, a lost record, a malformed amount or markup in an element value. It found the unescaped dates and currency and the out-of-range amounts fixed in 0.0.36.
 - **Supply chain.** Dependencies are locked in `poetry.lock`, CI installs hash-pinned exports of it, and `pip-audit`, Bandit and CodeQL run on every change. Releases publish to PyPI through OIDC trusted publishing and carry cosign signatures, SLSA provenance and SBOMs; every workflow action is pinned by commit SHA except the SLSA generator, which must be referenced by tag.
 
 Report vulnerabilities according to [`SECURITY.md`](SECURITY.md).

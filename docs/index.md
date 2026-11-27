@@ -12,7 +12,7 @@ inside `<BANKMSGSRSV1><STMTTRNRS><STMTRS>`, with a ledger balance.
 | Input | `list[Transaction]`, a `pandas.DataFrame`, `list[dict]`, or a core parser object |
 | Structure | `<SIGNONMSGSRSV1>`, `<BANKMSGSRSV1>`, `<STMTRS>`, `<BANKTRANLIST>` and `<LEDGERBAL>` |
 | Transactions | `<TRNTYPE>` (`CREDIT` or `DEBIT`), `<DTPOSTED>`, `<TRNAMT>`, `<FITID>`, `<NAME>` and an optional `<MEMO>` |
-| Safety | `&`, `<` and `>` escaped in every value; NaN and infinite amounts written as `0.00` |
+| Safety | `&`, `<` and `>` escaped in every value; NaN, infinite and out-of-range amounts written as `0.00` |
 
 ```python
 from bankstatementparser import create_parser

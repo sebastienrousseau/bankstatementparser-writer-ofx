@@ -44,7 +44,8 @@ write_ofx(): to_ofx() -> UTF-8 file                                  -> Path
 - **Escape at the edge.** Every value from the records or the arguments
   goes through `_escape_ofx_text` as it is placed in the document; the
   fuzz target checks no element value carries markup.
-- **Never raise on a bad value.** An unparseable, NaN or infinite amount
+- **Never raise on a bad value.** An unparseable, NaN, infinite or
+  out-of-range amount
   becomes `0.00` and a missing date becomes the current time, so one
   odd row cannot abort an export; the cost is that bad input is not
   reported.

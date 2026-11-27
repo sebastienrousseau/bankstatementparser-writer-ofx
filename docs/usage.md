@@ -17,7 +17,7 @@ skipped.
 
 | OFX element | Taken from |
 | :--- | :--- |
-| `<TRNAMT>` | `amount`, to two decimals; unparseable, NaN or infinite amounts become `0.00` |
+| `<TRNAMT>` | `amount`, to two decimals; unparseable, NaN, infinite or out-of-range (beyond 28 significant digits at cent precision) amounts become `0.00` |
 | `<TRNTYPE>` | `CREDIT` when the amount is above zero, otherwise `DEBIT` |
 | `<DTPOSTED>` | `date`, else `booking_date`, else `value_date` (a `Transaction` gives its booking date, else its value date), as `YYYYMMDD120000[0:UTC]`; a `datetime` keeps its time, another string is written with `-`, `:` and spaces removed, and no date gives the current time |
 | `<FITID>` | `transaction_id`, else `reference`, else `TX-000001` by position (a `Transaction` without an ID gives its `transaction_hash`) |

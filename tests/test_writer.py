@@ -248,3 +248,18 @@ def test_non_finite_amount_is_written_as_zero(amount: object) -> None:
     out = to_ofx([{"amount": amount, "payee": "Odd amount"}])
     assert "<TRNAMT>0.00" in out
     assert "<BALAMT>0.00" in out
+
+
+def test_dates_and_currency_cannot_inject_markup() -> None:
+    """Record dates and the currency are escaped like every other value.
+
+    They were written raw, so a currency of "<X>" or a date string
+    holding markup or a newline opened elements in the document.
+    """
+    out = to_ofx(
+        [{"amount": "1.00", "date": "2026<01>&\n<FOO>", "currency": "<X>"}]
+    )
+    assert "<CURDEF>&lt;X&gt;\n" in out
+    assert "<DTPOSTED>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
+    assert "<DTSTART>2026&lt;01&gt;&amp; &lt;FOO&gt;\n" in out
+    assert "<FOO>" not in out

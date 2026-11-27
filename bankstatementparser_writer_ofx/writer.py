@@ -122,59 +122,7 @@ def _normalize_records(
     return records
 
 
-def to_ofx(
-    data: (
-        Sequence[Transaction]
-        | pd.DataFrame
-        | Sequence[Mapping[str, Any]]
-        | Any
-    ),
-    bank_id: str = "123456789",
-    account_id: str | None = None,
-    account_type: str = "CHECKING",
-    currency: str = "EUR",
-) -> str:
-    """Serialise bank transactions into standard OFX 1.02 format.
-
-    Args:
-        data: Transactions as DataFrame, Transaction list, or dict records.
-        bank_id: Routing / Bank identifier.
-        account_id: Account identifier (inferred from first transaction if None).
-        account_type: Account type (default 'CHECKING', e.g. 'SAVINGS', 'CREDITLINE').
-        currency: ISO 4217 Currency code (default 'EUR').
-
-    Returns:
-        Formatted OFX document string.
-    """
-    records = _normalize_records(data)
-    now_str = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S[0:UTC]")
-
-    inferred_acct = account_id
-    inferred_curr = currency
-
-    for rec in records:
-        if not inferred_acct and rec.get("account_id"):
-            inferred_acct = str(rec["account_id"])
-        if currency == "EUR" and rec.get("currency"):
-            inferred_curr = str(rec["currency"])
-
-    inferred_acct = inferred_acct or "0000000000"
-
-    # Find date bounds
-    valid_dates: list[str] = [
-        _format_ofx_datetime(
-            rec.get("date") or rec.get("booking_date") or rec.get("value_date")
-        )
-        for rec in records
-        if (
-            rec.get("date") or rec.get("booking_date") or rec.get("value_date")
-        )
-        is not None
-    ]
-    start_dt = min(valid_dates) if valid_dates else now_str
-    end_dt = max(valid_dates) if valid_dates else now_str
-
-    header = f"""OFXHEADER:100
+_HEADER = """OFXHEADER:100
 DATA:OFXSGML
 VERSION:102
 SECURITY:NONE
@@ -191,7 +139,7 @@ NEWFILEUID:NONE
 <CODE>0
 <SEVERITY>INFO
 </STATUS>
-<DTSERVER>{now_str}
+<DTSERVER>{now}
 <LANGUAGE>ENG
 </SONRS>
 </SIGNONMSGSRSV1>
@@ -203,50 +151,21 @@ NEWFILEUID:NONE
 <SEVERITY>INFO
 </STATUS>
 <STMTRS>
-<CURDEF>{inferred_curr}
+<CURDEF>{currency}
 <BANKACCTFROM>
-<BANKID>{_escape_ofx_text(bank_id)}
-<ACCTID>{_escape_ofx_text(inferred_acct)}
-<ACCTTYPE>{_escape_ofx_text(account_type)}
+<BANKID>{bank_id}
+<ACCTID>{account_id}
+<ACCTTYPE>{account_type}
 </BANKACCTFROM>
 <BANKTRANLIST>
-<DTSTART>{start_dt}
-<DTEND>{end_dt}
+<DTSTART>{start}
+<DTEND>{end}
 """
 
-    body_lines: list[str] = []
-    running_total = Decimal("0.00")
-
-    for idx, rec in enumerate(records):
-        amt = _coerce_amount_decimal(rec.get("amount"))
-        running_total += amt
-        trn_type = "CREDIT" if amt > 0 else "DEBIT"
-        d_val = (
-            rec.get("date") or rec.get("booking_date") or rec.get("value_date")
-        )
-        d_str = _format_ofx_datetime(d_val)
-        fitid = (
-            rec.get("transaction_id")
-            or rec.get("reference")
-            or f"TX-{idx + 1:06d}"
-        )
-        name = rec.get("payee") or rec.get("description") or "Transaction"
-        memo = rec.get("memo") or rec.get("reference") or ""
-
-        body_lines.append("<STMTTRN>")
-        body_lines.append(f"<TRNTYPE>{trn_type}")
-        body_lines.append(f"<DTPOSTED>{d_str}")
-        body_lines.append(f"<TRNAMT>{amt:.2f}")
-        body_lines.append(f"<FITID>{_escape_ofx_text(fitid)}")
-        body_lines.append(f"<NAME>{_escape_ofx_text(name)}")
-        if memo:
-            body_lines.append(f"<MEMO>{_escape_ofx_text(memo)}")
-        body_lines.append("</STMTTRN>")
-
-    footer = f"""</BANKTRANLIST>
+_FOOTER = """</BANKTRANLIST>
 <LEDGERBAL>
-<BALAMT>{running_total:.2f}
-<DTASOF>{now_str}
+<BALAMT>{total:.2f}
+<DTASOF>{now}
 </LEDGERBAL>
 </STMTRS>
 </STMTTRNRS>
@@ -254,7 +173,113 @@ NEWFILEUID:NONE
 </OFX>
 """
 
-    return header + "\n".join(body_lines) + "\n" + footer
+
+def _record_date(rec: Mapping[str, Any]) -> Any:
+    """The record's date: ``date``, else ``booking_date``, else ``value_date``."""
+    return rec.get("date") or rec.get("booking_date") or rec.get("value_date")
+
+
+def _infer_account_and_currency(
+    records: list[dict[str, Any]], account_id: str | None, currency: str
+) -> tuple[str, str]:
+    """Fill the account from the first record that has one, and the
+    currency from the last, when the caller left the default ``EUR``."""
+    inferred_acct = account_id
+    inferred_curr = currency
+    for rec in records:
+        if not inferred_acct and rec.get("account_id"):
+            inferred_acct = str(rec["account_id"])
+        if currency == "EUR" and rec.get("currency"):
+            inferred_curr = str(rec["currency"])
+    return inferred_acct or "0000000000", inferred_curr
+
+
+def _date_range(records: list[dict[str, Any]], now: str) -> tuple[str, str]:
+    """Earliest and latest formatted record date, or ``now`` for both."""
+    dates = [
+        _format_ofx_datetime(_record_date(rec))
+        for rec in records
+        if _record_date(rec) is not None
+    ]
+    if not dates:
+        return now, now
+    return min(dates), max(dates)
+
+
+def _transaction_lines(idx: int, rec: Mapping[str, Any]) -> list[str]:
+    """The ``<STMTTRN>`` block for one record, every value escaped."""
+    amt = _coerce_amount_decimal(rec.get("amount"))
+    fitid = (
+        rec.get("transaction_id")
+        or rec.get("reference")
+        or f"TX-{idx + 1:06d}"
+    )
+    name = rec.get("payee") or rec.get("description") or "Transaction"
+    memo = rec.get("memo") or rec.get("reference") or ""
+    lines = [
+        "<STMTTRN>",
+        f"<TRNTYPE>{'CREDIT' if amt > 0 else 'DEBIT'}",
+        f"<DTPOSTED>{_escape_ofx_text(_format_ofx_datetime(_record_date(rec)))}",
+        f"<TRNAMT>{amt:.2f}",
+        f"<FITID>{_escape_ofx_text(fitid)}",
+        f"<NAME>{_escape_ofx_text(name)}",
+    ]
+    if memo:
+        lines.append(f"<MEMO>{_escape_ofx_text(memo)}")
+    lines.append("</STMTTRN>")
+    return lines
+
+
+def to_ofx(
+    data: (
+        Sequence[Transaction]
+        | pd.DataFrame
+        | Sequence[Mapping[str, Any]]
+        | Any
+    ),
+    bank_id: str = "123456789",
+    account_id: str | None = None,
+    account_type: str = "CHECKING",
+    currency: str = "EUR",
+) -> str:
+    """Serialise bank transactions into standard OFX 1.02 format.
+
+    Every value taken from the records or the arguments is escaped, so
+    record text can never open or close an OFX element.
+
+    Args:
+        data: Transactions as DataFrame, Transaction list, or dict records.
+        bank_id: Routing / Bank identifier.
+        account_id: Account identifier (inferred from first transaction if None).
+        account_type: Account type (default 'CHECKING', e.g. 'SAVINGS', 'CREDITLINE').
+        currency: ISO 4217 Currency code (default 'EUR').
+
+    Returns:
+        Formatted OFX document string.
+    """
+    records = _normalize_records(data)
+    now = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S[0:UTC]")
+    acct, curr = _infer_account_and_currency(records, account_id, currency)
+    start, end = _date_range(records, now)
+    header = _HEADER.format(
+        now=now,
+        currency=_escape_ofx_text(curr),
+        bank_id=_escape_ofx_text(bank_id),
+        account_id=_escape_ofx_text(acct),
+        account_type=_escape_ofx_text(account_type),
+        start=_escape_ofx_text(start),
+        end=_escape_ofx_text(end),
+    )
+    body: list[str] = []
+    for idx, rec in enumerate(records):
+        body.extend(_transaction_lines(idx, rec))
+    total = sum(
+        (_coerce_amount_decimal(rec.get("amount")) for rec in records),
+        Decimal("0.00"),
+    )
+    return (
+        header + "\n".join(body) + "\n" + _FOOTER.format(total=total, now=now)
+    )
 
 
 def write_ofx(

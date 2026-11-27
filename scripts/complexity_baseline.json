@@ -5,11 +5,6 @@
   "bankstatementparser_writer_ofx/writer.py::_normalize_records": {
     "cyclomatic": 12
   },
-  "bankstatementparser_writer_ofx/writer.py::to_ofx": {
-    "cognitive": 21,
-    "cyclomatic": 26,
-    "lines": 133
-  },
   "tests/test_suite_conformance.py": {
     "file_lines": 678
   },

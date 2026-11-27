@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.36] - 2026-11-27
+
+In lockstep with the suite's 0.0.36 release.
+
+### Changed
+
+- Requires `bankstatementparser >= 0.0.35` (was `>= 0.0.34`), the
+  newest core release on PyPI.
+
 ## [0.0.35] - 2026-11-26
 
 Joins the bankstatementparser suite's lockstep release, from 0.0.19

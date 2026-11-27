@@ -14,7 +14,7 @@ copyright = "2023-2026, Sebastien Rousseau"
 try:
     release = importlib.metadata.version("bankstatementparser-writer-ofx")
 except importlib.metadata.PackageNotFoundError:
-    release = "0.0.35"
+    release = "0.0.36"
 version = ".".join(release.split(".")[:2])
 
 extensions = [

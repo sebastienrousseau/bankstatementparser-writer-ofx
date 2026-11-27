@@ -11,10 +11,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 In lockstep with the suite's 0.0.36 release.
 
+### Fixed
+
+- `to_ofx` raised `decimal.InvalidOperation` on an amount of `"NaN"`
+  (or `"sNaN"`, or a NaN `Decimal`), and wrote `"Infinity"` as
+  `<TRNAMT>Infinity`. Any NaN or infinite amount is now written as
+  `0.00`, as an unparseable amount already was.
+- Record dates (`<DTPOSTED>`, `<DTSTART>`, `<DTEND>`) and the currency
+  (`<CURDEF>`) were written without escaping, so markup or a newline in
+  them opened elements in the document. Every value is now escaped.
+  The new fuzz target found this.
+
+### Added
+
+- `fuzz/fuzz_to_ofx.py`: an Atheris target for `to_ofx`, run for two
+  minutes by the CI `Fuzz (Atheris)` job. It fails on any exception, a
+  lost record, a malformed amount or markup in an element value.
+- `benches/bench_to_ofx.py`: times `to_ofx` on `Transaction` lists,
+  DataFrames and dicts from 10 to 10,000 records, replacing a benchmark
+  that timed an empty loop. CI runs it with `--quick`.
+- A user manual built with MkDocs Material (`mkdocs.yml`, `docs/`),
+  with usage and the full field mapping, architecture, comparison,
+  benchmarks, the supported Python policy and an API reference,
+  deployed to GitHub Pages by `.github/workflows/docs.yml`.
+  `ARCHITECTURE.md`, `GOVERNANCE.md`, `SUPPORT.md` and
+  `CODE_OF_CONDUCT.md` are new.
+- A `Makefile`: `make check` runs every local gate; `bench`, `fuzz`,
+  `docs`, `demo`, `audit` and `requirements` targets.
+- Hashed `requirements/` exports of `poetry.lock`
+  (`scripts/export_locked_requirements.py`), installed by every CI job
+  with `--require-hashes`; CI fails when they drift from the lock.
+- `.github/workflows/security.yml`: `pip-audit` on the runtime, dev,
+  docs and fuzz sets on every change and weekly.
+- `.github/workflows/scorecard.yml` (OpenSSF Scorecard) and
+  `.github/workflows/docs-lint.yml` (README template check and
+  markdownlint), issue templates and a pull request template.
+- Releases attach cosign signatures (`.sig`, `.pem`), SLSA provenance
+  (`.intoto.jsonl`) and CycloneDX and SPDX SBOMs to the GitHub release.
+- `.github/demo.gif`, rendered from `.github/demo.tape` by `make demo`.
+
 ### Changed
 
 - Requires `bankstatementparser >= 0.0.35` (was `>= 0.0.34`), the
   newest core release on PyPI.
+- `to_ofx` is split into small helpers; it was over every complexity
+  ceiling (cyclomatic 26, 133 lines) and now none of its parts is, so
+  the complexity baseline shrinks from seven offenders to six.
+- CI tests on ubuntu, macOS and Windows with CPython 3.10 to 3.14
+  (Linux only before), and every action is pinned by commit SHA except
+  the SLSA generator, which must be referenced by tag.
+- The examples now use the package: Transactions to OFX, and a CSV to
+  OFX round trip on `examples/data/statement.csv`.
+- The README follows the portfolio template and no longer claims OFX
+  2.x output, `PAYMENT`/`CHECK`/`FEE` transaction types, or a
+  `to_transactions()` call on the CSV parser; its API signatures match
+  the code.
+- `CONTRIBUTING.md` drops the instruction to install a pre-commit hook
+  the repository never had; `SECURITY.md` adds a private-advisory link
+  and states what the writer does and does not protect.
+
+### Removed
+
+- `docs/conf.py` and `docs/readme.md`: a Sphinx configuration nothing
+  installed or built, and a page that only pointed at the README.
 
 ## [0.0.35] - 2026-11-26
 

@@ -1,0 +1,45 @@
+name: Security
+
+# pip-audit against the locked dependency sets, on every pull request and
+# push, and weekly so an advisory published between changes still turns
+# the repository red. Bandit runs in CI's lint job.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: pip-audit (vulnerable dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install locked dev tools (pip-audit)
+        run: pip install --require-hashes -r requirements/ci.txt
+
+      # Audits the locked sets that ship (runtime) and that CI runs (dev,
+      # docs, fuzz), rather than whatever the runner happens to have
+      # installed. Any advisory fails the job.
+      - name: Audit locked requirements
+        run: |
+          pip-audit --require-hashes --disable-pip -r requirements/runtime.txt
+          pip-audit --require-hashes --disable-pip -r requirements/ci.txt
+          pip-audit --require-hashes --disable-pip -r requirements/docs.txt
+          pip-audit --require-hashes --disable-pip -r requirements/fuzz.txt

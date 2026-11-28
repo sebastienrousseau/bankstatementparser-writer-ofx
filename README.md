@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-writer-ofx/main/.github/demo.gif" alt="A terminal printing the installed version, 0.0.36, then the two examples: two transactions written as OFX statement blocks, and a CSV statement converted to an OFX file and parsed back into four transactions" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-writer-ofx/main/.github/demo.gif" alt="A terminal printing the installed version, 0.0.37, then the two examples: two transactions written as OFX statement blocks, and a CSV statement converted to an OFX file and parsed back into four transactions" width="100%" />
 </p>
 
 ---

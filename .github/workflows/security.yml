@@ -34,12 +34,13 @@ jobs:
       - name: Install locked dev tools (pip-audit)
         run: pip install --require-hashes -r requirements/ci.txt
 
-      # Audits the locked sets that ship (runtime) and that CI runs (dev,
-      # docs, fuzz), rather than whatever the runner happens to have
-      # installed. Any advisory fails the job.
+      # Audits every locked set: what ships (runtime), what CI runs
+      # (dev), the manual, the fuzzer and the release tooling, rather
+      # than whatever the runner happens to have installed. Any
+      # advisory fails the job.
       - name: Audit locked requirements
         run: |
-          pip-audit --require-hashes --disable-pip -r requirements/runtime.txt
-          pip-audit --require-hashes --disable-pip -r requirements/ci.txt
-          pip-audit --require-hashes --disable-pip -r requirements/docs.txt
-          pip-audit --require-hashes --disable-pip -r requirements/fuzz.txt
+          for f in runtime ci docs fuzz build sbom; do
+            echo "== requirements/$f.txt"
+            pip-audit --require-hashes --disable-pip -r "requirements/$f.txt"
+          done

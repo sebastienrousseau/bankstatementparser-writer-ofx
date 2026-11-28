@@ -58,8 +58,8 @@ docs: ## Build the user manual (mkdocs --strict) into site/
 demo: ## Render the README demo GIF with VHS
 	vhs .github/demo.tape
 
-audit: ## pip-audit the locked runtime, dev, docs and fuzz sets
-	@for f in runtime ci docs fuzz; do \
+audit: ## pip-audit every locked requirement set
+	@for f in runtime ci docs fuzz build sbom; do \
 		$(POETRY) run pip-audit --require-hashes --disable-pip -r requirements/$$f.txt || exit 1; \
 	done
 

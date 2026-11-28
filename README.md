@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-writer-ofx/main/.github/demo.gif" alt="A terminal printing the installed version, 0.0.36, then the two examples: two transactions written as OFX statement blocks, and a CSV statement converted to an OFX file and parsed back into four transactions" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-writer-ofx/main/.github/demo.gif" alt="A terminal printing the installed version, 0.0.37, then the two examples: two transactions written as OFX statement blocks, and a CSV statement converted to an OFX file and parsed back into four transactions" width="100%" />
 </p>
 
 ---
@@ -65,18 +65,18 @@
 pip install bankstatementparser-writer-ofx
 ```
 
-That installs the writer, `bankstatementparser >= 0.0.35` and pandas.
+That installs the writer, `bankstatementparser >= 0.0.36` and pandas.
 
 | Channel | Command | Notes |
 | :--- | :--- | :--- |
-| PyPI | `pip install bankstatementparser-writer-ofx` | Pulls in `bankstatementparser >= 0.0.35` |
+| PyPI | `pip install bankstatementparser-writer-ofx` | Pulls in `bankstatementparser >= 0.0.36` |
 | Source | `git clone https://github.com/sebastienrousseau/bankstatementparser-writer-ofx && cd bankstatementparser-writer-ofx && poetry install` | For local development |
 
 Verify the installation:
 
 ```sh
 python -c "import bankstatementparser_writer_ofx as w; print(w.__version__)"
-# -> 0.0.36
+# -> 0.0.37
 ```
 
 An isolated virtual environment keeps its dependencies apart:
@@ -93,7 +93,7 @@ python -m pip install -U bankstatementparser-writer-ofx
 ## Requirements
 
 - **Python 3.10 or later.** CI tests CPython 3.10, 3.11, 3.12, 3.13 and 3.14 on Linux, macOS and Windows; [`docs/POLICIES.md`](docs/POLICIES.md) says when the floor moves.
-- **[`bankstatementparser`](https://pypi.org/project/bankstatementparser/) 0.0.35 or later**, for the `Transaction` model and the parsers that feed the writer, and pandas, which it brings.
+- **[`bankstatementparser`](https://pypi.org/project/bankstatementparser/) 0.0.36 or later**, for the `Transaction` model and the parsers that feed the writer, and pandas, which it brings.
 
 ---
 

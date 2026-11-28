@@ -76,7 +76,7 @@ Verify the installation:
 
 ```sh
 python -c "import bankstatementparser_writer_ofx as w; print(w.__version__)"
-# -> 0.0.36
+# -> 0.0.37
 ```
 
 An isolated virtual environment keeps its dependencies apart:
